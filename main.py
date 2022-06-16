@@ -1,12 +1,10 @@
-import signal
 import ast
 import concurrent.futures
 from io import StringIO
-from json import loads
 import os
 from random import choices, randint
+import signal
 import sys
-import threading
 import time
 from typing import Callable, Tuple
 import warnings
