@@ -13,10 +13,10 @@ But here it is.
 
 To generate 10 code samples between 8 and 20 characters, which output `True`, here are the numbers:
 
-Num Results: 10
-Total Duration: 805.12
-Avg Duration: 433.57
-Avg Number of Tries: 24155430.6
+* Num Results: 10
+* Total Duration: 805.12
+* Avg Duration: 433.57
+* Avg Number of Tries: 24,155,430.6
 
 And here are the samples:
 
