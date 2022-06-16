@@ -20,13 +20,13 @@ To generate 10 code samples between 8 and 20 characters, which output `True`, he
 
 And here are the samples:
 
-* `"'&\t'<'2Op, ,VN!r'"`
-* `'"+"\n<F\'8E\''`
-* `'"l@;u\tu">\'\''`
-* `' "/ttGaw"<\'YtV\''`
-* `'0.<\n422 '`
-* `'\t243>+.5'`
-* `"9!='A5:rkAy'"`
-* `'37>+6+\r9'`
-* `"'UfI&m' <'cA_-J0'"`
-* `'1%\r7<59\r'`
+* `'&\t'<'2Op, ,VN!r'`
+* `"+"\n<F\'8E\'`
+* `"l@;u\tu">\'\'`
+* ` "/ttGaw"<\'YtV\'`
+* `0.<\n422 `
+* `\t243>+.5`
+* `9!='A5:rkAy'`
+* `37>+6+\r9`
+* `'UfI&m' <'cA_-J0'`
+* `1%\r7<59\r`
