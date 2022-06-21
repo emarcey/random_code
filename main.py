@@ -2,6 +2,7 @@ import ast
 import concurrent.futures
 from io import StringIO
 import os
+from prettytable import PrettyTable
 from random import choices, randint
 import signal
 import sys
@@ -53,26 +54,40 @@ def main(target_func: Callable, min_size=3, max_size=100) -> Tuple[bool, str, fl
     return False, "", round(time.time() - start_time, 2), i
 
 
+def render_row(t, name, vals):
+    t.add_row([name] + [f"{round(x, 2):,}" for x in [min(vals), max(vals), round(sum(vals) / len(vals), 2), sum(vals)]])
+
+
+def render(target_func, min_size, max_size, n, results):
+    t0 = PrettyTable(align="l")
+    t0.field_names = ["Target Func", "Min Result Size", "Max Result Size", "Num Results"]
+    t0.add_row([target_func.__name__, min_size, max_size, n])
+
+    t1 = PrettyTable(align="r")
+    t1.field_names = ["Metric", "Min", "Max", "Avg", "Total"]
+    t1.align["Metric"] = "l"
+    render_row(t1, "Duration (s)", [r[2] for r in results])
+    render_row(t1, "Code Samples Generated", [r[3] for r in results])
+    render_row(t1, "Code Sample Length", [len(r[1]) for r in results])
+
+    t2 = PrettyTable(align="l")
+    t2.field_names = ["Code Samples"]
+    t2.add_rows([[repr(r[1])] for r in results])
+    print(f"{t0}\n{t1}\n{t2}")
+
+
 def process(target_func: Callable, min_size=3, max_size=100, n=10):
     start_time = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = []
         futures = [executor.submit(main, target_func, min_size, max_size) for i in range(min(n, os.cpu_count()))]
-        [completed, incomplete] = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
         try:
-            for future in completed:
+            for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
-            for p in executor._processes:
-                os.kill(p, signal.SIGTERM)
         except Exception as e:
             raise e
 
-    num_results = len(results)
-    print(f"Num Results: {num_results}")
-    print(f"Total Duration (s): {round(time.time() - start_time, 2):,}")
-    print(f"Number of Tries: {round(float(sum([r[3] for r in results]))/num_results, 2):,}")
-    print(f"Approx Total Number of Tries: {(round(float(sum([r[3] for r in results]))/num_results, 2)) * n:,}")
-    print(f"Code Samples: {[r[1] for r in results]}")
+    render(target_func, min_size, max_size, n, results)
     return results
 
 
@@ -104,5 +119,13 @@ def is_dict(x):
         return None
 
 
+def is_object(x):
+    try:
+        val = ast.literal_eval(x)
+        return isinstance(val, object)
+    except:
+        return None
+
+
 if __name__ == "__main__":
-    process(is_nonempty_dict, 8, 20, 5)
+    process(is_true, 8, 20, 5)
