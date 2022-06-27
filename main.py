@@ -32,8 +32,16 @@ def gen_code(min_size=3, max_size=100) -> str:
 
 def my_exec(code):
     try:
-        with Capturing() as output, warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=SyntaxWarning)
+        with Capturing() as output:
+            exec(f"print({repr(code)})")
+        return "".join(output)
+    except Exception as e:
+        return None
+
+
+def my_exec2(code):
+    try:
+        with Capturing() as output:
             exec(f"print({code})")
         return "".join(output)
     except Exception as e:
@@ -44,12 +52,14 @@ def main(target_func: Callable, min_size=3, max_size=100) -> Tuple[bool, str, fl
     start_time = time.time()
     i = 0
     while True:
-        my_code = gen_code(min_size, max_size)
-        if target_func(my_exec(my_code)):
-            return True, my_code, round(time.time() - start_time, 2), i
-        if i > 0 and i % 1_000_000 == 0:
-            print(f"Trial {i:,} {my_code}")
-        i += 1
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=SyntaxWarning)
+            my_code = gen_code(min_size, max_size)
+            if target_func(my_exec(my_code)) or target_func(my_exec2(my_code)):
+                return True, my_code, round(time.time() - start_time, 2), i
+            if i > 0 and i % 1_000_000 == 0:
+                print(f"Trial {i:,} {repr(my_code)}")
+            i += 1
 
     return False, "", round(time.time() - start_time, 2), i
 
@@ -60,7 +70,7 @@ def render_row(t, name, vals):
 
 def render(target_func, min_size, max_size, n, results):
     t0 = PrettyTable(align="l")
-    t0.field_names = ["Target Func", "Min Result Size", "Max Result Size", "Num Results"]
+    t0.field_names = ["Target Func", "Min Result Size", "Max Result Size", "Num Workers"]
     t0.add_row([target_func.__name__, min_size, max_size, n])
 
     t1 = PrettyTable(align="r")
@@ -76,7 +86,7 @@ def render(target_func, min_size, max_size, n, results):
     print(f"{t0}\n{t1}\n{t2}")
 
 
-def process(target_func: Callable, min_size=3, max_size=100, n=10):
+def process_parallel(target_func: Callable, min_size=3, max_size=100, n=10):
     start_time = time.time()
     with concurrent.futures.ProcessPoolExecutor() as executor:
         results = []
@@ -91,15 +101,40 @@ def process(target_func: Callable, min_size=3, max_size=100, n=10):
     return results
 
 
+def process_get_first(target_func: Callable, min_size=3, max_size=100, n=10):
+    start_time = time.time()
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        results = []
+        futures = [executor.submit(main, target_func, min_size, max_size) for i in range(min(n, os.cpu_count()))]
+        [completed, incomplete] = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+        try:
+            for future in completed:
+                results.append(future.result())
+            for p in executor._processes:
+                os.kill(p, signal.SIGTERM)
+        except Exception as e:
+            raise e
+
+    render(target_func, min_size, max_size, n, results)
+    return results
+
+
 def is_string(x):
     return isinstance(x, str)
+
+
+def is_func(x):
+    try:
+        return callable(eval(x))
+    except:
+        return None
 
 
 def is_true(x):
     try:
         val = ast.literal_eval(x)
         return isinstance(val, bool) and val
-    except:
+    except Exception as e:
         return None
 
 
@@ -128,4 +163,4 @@ def is_object(x):
 
 
 if __name__ == "__main__":
-    process(is_true, 8, 20, 5)
+    process_parallel(is_func, 5, 200, 5)
